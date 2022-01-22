@@ -1,0 +1,170 @@
+<html>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+  <style>
+    body {
+    }
+    
+    .header {
+	width: 100%;
+    }
+
+    .input {
+	float: left;
+    }
+
+    .output {
+	float: right;
+    }
+
+    .output > p {
+	border: 1px dotted gray;
+    }
+  </style>
+
+  <body>
+    <div class="header">
+      <h1>Vordlemalt</h1>
+      <p>Alt-text Generator for Wordle</p>
+    </div>
+    
+    <div class="input">
+      <textarea id="text" rows="10"></textarea>
+      <br/>
+      <button type="button" id="go">Get Alt Text</button>
+    </div>
+
+    <div class="output">
+      <h1>Paste this image</h1>
+      <canvas id="canvas" width="100" height="120" style="display: none;"></canvas>
+      <img id="image"/>
+      <h1>Alt Text</h1>
+      <p id="alttext"></p>
+    </div>
+
+
+    <script>
+       const black = 0x2B1B
+       
+       const prefix = 0xD83D
+       const green = 0xDFE9
+       const yellow = 0xDFE8
+
+       const charVals = [black, prefix, green, yellow]
+      
+       function getFirstResult(lines) {
+	   for (let i = 0; i < lines.length; i++) {
+	       const firstChar = lines[i].charCodeAt(0)
+	       if (charVals.includes(firstChar)) {
+		   return i
+	       }
+	   }
+	   
+	   return -1
+       }
+
+       function getColor(c) {
+	   switch (c) {
+	   case green: return 'rgb(20, 180, 20)'
+	   case yellow: return 'rgb(230, 190, 20)'
+	   case black: return 'rgb(10, 10, 10)'
+	   }
+       }
+
+       function getText(c) {
+	   switch (c) {
+	   case green: return 'Hit'
+	   case yellow: return 'Miss'
+	   case black: return 'Unused'
+	   }
+       }
+
+       function buildImage(lines) {
+	   console.log('#buildImage', lines)
+
+	   let text = ''
+	   let win = ''
+	   let x = 0
+	   let y = 0
+	   const canvas = document.getElementById('canvas')
+	   const ctx = canvas.getContext('2d')
+	  
+	   for (let i = 0; i < lines.length; i++) {
+	       const line = lines[i]
+	      
+	       const firstChar = line.charCodeAt(0)
+	       if (!charVals.includes(firstChar)) {
+		   break;
+	       }
+
+	       text = text + `Line ${i + 1}: `
+	       console.log(line, line.length)
+
+	       const charTexts = []
+	       for (let j = 0; j < line.length; j++) {
+		   let char = line.charCodeAt(j)
+
+		   let fillStyle
+		   if (char !== black) {
+		       char = line.charCodeAt(++j)
+		   }
+		   
+		   fillStyle = getColor(char)
+		   
+		   console.log(`L ${i}, C ${j}: Drawing ${fillStyle} at ${x}, ${y} for ${char}`)
+		  
+		   ctx.fillStyle = fillStyle
+		   ctx.fillRect(x, y, 16, 16)
+
+		   charTexts.push(getText(char))
+
+		   x = x + 20
+	       }
+
+	       if (charTexts.every(v => v === 'Hit')) {
+		   win = 'A winner!'
+	       }
+	       
+	       text = `${text}${charTexts.join(', ')}. `
+
+	       console.log('newline')
+	       x = 0
+	       y = y + 20
+	   }
+
+	   if (win !== '') {
+	       text = `${text}${win}`
+	   } else {
+	       text = `${text}Didn't win.`
+	   }
+
+	   text = `A Wordle result contains at most six lines, one line per guess. Each line contains five colored squares. A green square represents a "hit", a correct letter in the correct position. A yellow square represents a "miss", a correct letter in an incorrect position. A black square represents a letter not used in the word. ${text}`
+
+	   console.log(text)
+
+	   const img = canvas.toDataURL("image/png");
+	   
+	   $('#image')
+	       .attr('src', img)
+	       .attr('alt', text)
+	       .attr('title', text)
+	   $('#alttext').text(text)
+       }
+	  
+      function process(e) {
+	  const val = $('#text').val()
+	  const lines = val.split('\n')
+
+	  const firstLineIndex = getFirstResult(lines)
+	  
+	  console.log(lines)
+	  console.log(`First result line at index ${firstLineIndex}`)
+	  buildImage(lines.slice(firstLineIndex))
+      }
+      
+      $(() => {
+	  $('#go').on('click', process)
+      })
+    </script>
+  </body>
+</html>
